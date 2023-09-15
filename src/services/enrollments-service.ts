@@ -13,7 +13,6 @@ async function getAddressFromCEP(cep: string): Promise<CEPFormat> {
 
   if (!result.data.cep) throw cpfError('CEP inexistente');
 
-  //* FIXME: não estamos interessados em todos os campos
   const resp: CEPFormat = {
     logradouro: result.data.logradouro,
     complemento: result.data.complemento,
@@ -28,7 +27,7 @@ async function getAddressFromCEP(cep: string): Promise<CEPFormat> {
 async function getOneWithAddressByUserId(userId: number): Promise<GetOneWithAddressByUserIdResult> {
   const enrollmentWithAddress = await enrollmentRepository.findWithAddressByUserId(userId);
 
-  if (!enrollmentWithAddress) throw notFoundError();
+  if (!enrollmentWithAddress) throw { name: 'BadRequest', message: 'Enrollment not found!' };
 
   const [firstAddress] = enrollmentWithAddress.Address;
   const address = getFirstAddress(firstAddress);
@@ -55,6 +54,10 @@ async function createOrUpdateEnrollmentWithAddress(params: CreateOrUpdateEnrollm
   const address = getAddressForUpsert(params.address);
 
   // TODO - Verificar se o CEP é válido antes de associar ao enrollment.
+
+  const result = await request.get(`${process.env.VIA_CEP_API}/${params.address.cep}/json/`);
+
+  if (!result.data.cep) throw cpfError('CEP invalido');
 
   const newEnrollment = await enrollmentRepository.upsert(params.userId, enrollment, exclude(enrollment, 'userId'));
 
